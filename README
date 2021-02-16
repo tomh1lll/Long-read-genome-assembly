@@ -1,4 +1,0 @@
-STEPS
-1: Create 'raw' directory in current working directory
-2: Update current working directory path in 'submit_slurm.sh' and 'pipeline_ctrl.sh' files
-3: Update information in 'config.yaml' file 
