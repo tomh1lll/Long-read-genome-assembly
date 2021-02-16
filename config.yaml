@@ -1,0 +1,9 @@
+result_dir: "/data/NCBR/projects/DenovoLRA_NR/test1"
+rawdata_dir: "/data/NCBR/projects/DenovoLRA_NR/test1/reads"
+genome_size: "23.5m"
+coverage: "200"
+lineage: "/data/NCBR/apps/genome-assembly/References/Odb10/Protists/apicomplexa_odb10"
+lineage_name: "apicomplexa_odb10"
+flye_default: "no"
+pipeVersion: "subreads"
+
