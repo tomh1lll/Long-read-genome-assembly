@@ -13,16 +13,7 @@ Genome = config["genome_size"]
 Coverage = config["coverage"]
 Lineage = config["lineage"]
 Lineage_name = config["lineage_name"]
-#result_dir = "/data/NCBR/projects/DenovoLRA_NR/test1"
-#Genome = "23.5m"
-#Coverage = "200"
-#Lineage = "/data/NCBR/apps/genome-assembly/References/Odb10/Protists/apicomplexa_odb10"
 
-#DOES NOT WORK!
-#shell.prefix("source $HOME/.bashrc; source /etc/profile; source /data/NCBR/apps/genome-assembly/conda/etc/profile.d/conda.sh; conda activate base")
-#set +u; source /data/NCBR/apps/genome-assembly/conda/etc/profile.d/conda.sh; set -u
-
-#SAMPLE = ["NF54_NIH-4"]
 SAMPLE, = glob_wildcards(join(result_dir, "raw/{samples}.bam"))
 ASSEMBLER = ["canu", "flye", "raven", "wtdbg2", "minipolish"]
 
@@ -51,11 +42,11 @@ rule All:
 
         # Gather assemblies in a directory
         expand(join(result_dir,"all-assemblies/{samples}.{assemblers}.fasta"), samples=SAMPLE, assemblers=ASSEMBLER),
-        #expand(join(result_dir,"all-assemblies/{samples}.canu.fasta"), samples=SAMPLE),
-        #expand(join(result_dir,"all-assemblies/{samples}.flye.fasta"), samples=SAMPLE),
-        #expand(join(result_dir,"all-assemblies/{samples}.minipolish.fasta"), samples=SAMPLE),
-        #expand(join(result_dir,"all-assemblies/{samples}.raven.fasta"), samples=SAMPLE),
-        #expand(join(result_dir,"all-assemblies/{samples}.wtdbg2.fasta"), samples=SAMPLE),
+        expand(join(result_dir,"all-assemblies/{samples}.canu.fasta"), samples=SAMPLE),
+        expand(join(result_dir,"all-assemblies/{samples}.flye.fasta"), samples=SAMPLE),
+        expand(join(result_dir,"all-assemblies/{samples}.minipolish.fasta"), samples=SAMPLE),
+        expand(join(result_dir,"all-assemblies/{samples}.raven.fasta"), samples=SAMPLE),
+        expand(join(result_dir,"all-assemblies/{samples}.wtdbg2.fasta"), samples=SAMPLE),
         
         # Quast - assembly statistics without reference
         join(result_dir,"sample-quast/report.html"),
@@ -65,11 +56,11 @@ rule All:
         # Scaffolders (ScaRa)
         expand(join(result_dir, "minimap2_overlaps/{samples}.read-read-overlap.paf"),samples=SAMPLE),
         expand(join(result_dir, "minimap2_overlaps/{samples}.{assemblers}-contig-overlap.paf"),samples=SAMPLE, assemblers=ASSEMBLER),
-        #expand(join(result_dir, "minimap2_overlaps/{samples}.canu-contig-overlap.paf"),samples=SAMPLE),
-        #expand(join(result_dir, "minimap2_overlaps/{samples}.raven-contig-overlap.paf"),samples=SAMPLE),
-        #expand(join(result_dir, "minimap2_overlaps/{samples}.minipolish-contig-overlap.paf"),samples=SAMPLE),
-        #expand(join(result_dir, "minimap2_overlaps/{samples}.flye-contig-overlap.paf"),samples=SAMPLE),
-        #expand(join(result_dir, "minimap2_overlaps/{samples}.wtdbg2-contig-overlap.paf"),samples=SAMPLE),
+        expand(join(result_dir, "minimap2_overlaps/{samples}.canu-contig-overlap.paf"),samples=SAMPLE),
+        expand(join(result_dir, "minimap2_overlaps/{samples}.raven-contig-overlap.paf"),samples=SAMPLE),
+        expand(join(result_dir, "minimap2_overlaps/{samples}.minipolish-contig-overlap.paf"),samples=SAMPLE),
+        expand(join(result_dir, "minimap2_overlaps/{samples}.flye-contig-overlap.paf"),samples=SAMPLE),
+        expand(join(result_dir, "minimap2_overlaps/{samples}.wtdbg2-contig-overlap.paf"),samples=SAMPLE),
 
     output:
         "multiqc_report.html"
