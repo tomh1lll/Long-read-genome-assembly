@@ -13,7 +13,7 @@ set -e
 module load python/3.7
 module load snakemake/5.13.0
 
-path=/data/NCBR/projects/DenovoLRA_NR/test1
+path=/data/NCBR/projects/ncbi-strongyloides/
 
 ##
 ## Test commandline arguments
@@ -46,7 +46,7 @@ done
 ##
 if [ "$1" == "npr" ]
 then
-    snakemake -npr --snakefile ${path}/assembly2.snakefile
+    snakemake -npr --snakefile ${path}/assembly.snakefile
 fi
 
 if [ "$1" == "process" ]
