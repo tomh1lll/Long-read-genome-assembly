@@ -10,6 +10,7 @@ BEFORE YOU RUN THE PIPELINE:
 5. Update project specific information in 'config.yaml' file.
 6. Assign current working directory path to "configfile" variable in Snakefile.
 7. Download the database for BUSCO (https://busco-data.ezlab.org/v4/data/lineages/) and assign the new Lineage in 'config.yaml'
+8. Download and install NextPolish (https://nextpolish.readthedocs.io/en/latest/QSTART.html#installation) and put the NextPolish directory within your working directory.
 
 ```
 git clone https://github.com/tomh1lll/Long-read-genome-assembly.git
