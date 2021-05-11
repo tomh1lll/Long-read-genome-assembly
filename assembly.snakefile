@@ -38,14 +38,9 @@ import datetime
 
 SAMPLE=["NCBR-174"]
 ASSEMBLER = ["canu", "flye", "raven", "wtdbg2", "minipolish"]
-PILON=["pilon1","pilon2","pilon3"]
-RACON=["racon1", "racon2", "racon3"]
-POLISHED=RACON+PILON
-
 
 print(SAMPLE)
 print(ASSEMBLER)
-print(POLISHED)
 
 rule All:
     input:
@@ -106,16 +101,8 @@ rule All:
         expand(join(result_dir, "minimap2_align/{samples}.{assemblers}.minimap2.sam"),samples=SAMPLE, assemblers=ASSEMBLER),
         expand(join(result_dir, "minimap2_align/{samples}.{assemblers}.minimap2.sorted.bam"),samples=SAMPLE, assemblers=ASSEMBLER),
 
-        #racon
-        expand(join(result_dir, "racon_polishing/{samples}.{assemblers}_racon1.fasta"),samples=SAMPLE, assemblers=ASSEMBLER),
-        expand(join(result_dir, "racon_polishing/{samples}.{assemblers}_racon2.fasta"),samples=SAMPLE, assemblers=ASSEMBLER),
-        expand(join(result_dir, "racon_polishing/{samples}.{assemblers}_racon3.fasta"),samples=SAMPLE, assemblers=ASSEMBLER),
-        expand(join(result_dir, "pilon_polishing/{samples}.{assemblers}_pilon1.fasta"),samples=SAMPLE, assemblers=ASSEMBLER),
-        expand(join(result_dir, "pilon_polishing/{samples}.{assemblers}_pilon2.fasta"),samples=SAMPLE, assemblers=ASSEMBLER),
-        expand(join(result_dir, "pilon_polishing/{samples}.{assemblers}_pilon3.fasta"),samples=SAMPLE, assemblers=ASSEMBLER),
-        expand(join(result_dir,"stats_busco/short_summary.{samples}.{Lineage_name}.{assemblers}_{iter}.txt"),samples=SAMPLE, assemblers=ASSEMBLER, Lineage_name=Lineage_name, iter=POLISHED),
-        join(result_dir,"polished-quast/report.html"),
-
+        #polishing
+        expand(join(result_dir, "all-assemblies/nextPolish.{samples}.{assemblers}/genome.nextpolish.fasta"),samples=SAMPLE, assemblers=ASSEMBLER),
     output:
         "multiqc_report.html"
     params:
@@ -276,15 +263,15 @@ rule flye_assembly:
     params:
         rname="flye_assembly",
         dir=directory(join(result_dir,"flye_assembly")),
-        flye="flye/2.7"
+        flye="flye/2.8-1"
     threads: 100
     shell:
         """
         module load {params.flye}
         cd /lscratch/$SLURM_JOBID
-        flye --threads {threads} --nano-raw {input} --genome-size {Genome} --out-dir {params.dir} --asm-coverage {Coverage}
+        flye --threads {threads}  --min-overlap 2500 --nano-raw {input} --genome-size {Genome} --out-dir {params.dir} --asm-coverage {Coverage}
         mv /lscratch/$SLURM_JOBID/{params.rname} {result_dir}
-        cp fly_assembly/assembly.fasta {output}
+        cp {params.dir}/assembly.fasta {output}
         """
 
 rule canu_assembly:
@@ -470,203 +457,24 @@ rule blobtools:
         {params.blobtools} plot -i {params.label}.blobDB.json
         """
 
-rule racon1:
+rule nextPolish:
     input:
+        BAM=join(result_dir, "raw/{samples}_CCS.fastq"),
         FA=join(result_dir, "all-assemblies/{samples}.{assemblers}.fasta"),
-        FQ=join(result_dir,"raw/{samples}_ONT.fastq")
     output:
-        PAF=temp(join(result_dir, "racon_polishing/{samples}.{assemblers}_racon1.paf")),
-        FA=temp(join(result_dir, "racon_polishing/{samples}.{assemblers}_racon1.fasta")),
+        out=join(result_dir, "all-assemblies/nextPolish.{samples}.{assemblers}/genome.nextpolish.fasta"),
     params:
-      rname="racon1",
-      tag="all-assemblies/{samples}.{assemblers}.mmi",
-      minimap2log=join(result_dir,"minimap2_align/{samples}.minimap2.log"),
-      raw=join(result_dir, "raw/{samples}_ONT.fasta"),
-      dir=directory(join(result_dir,"minimap2_align/"))
+        rname="nextPolish",
+        fqs=join(result_dir, "raw/{samples}_CCS.fofn"),
+        dir=join(result_dir, "all-assemblies/nextPolish.{samples}.{assemblers}"),
+        cfg=join(result_dir, "all-assemblies/nextPolish.{samples}.{assemblers}.cfg"),
     threads: 32
     shell:
         """
-        mkdir -p racon_polishing
-        module load winnowmap
-        winnowmap -d {params.tag} {input.FA}
-        winnowmap -x map-ont -t {threads} {input.FA} {input.FQ} > {output.PAF}
-        racon -t {threads} {input.FQ} {output.PAF} {input.FA} > {output.FA}
-        """
-
-rule racon2:
-    input:
-        FA=join(result_dir, "racon_polishing/{samples}.{assemblers}_racon1.fasta"),
-        FQ=join(result_dir,"raw/{samples}_ONT.fastq")
-    output:
-        PAF=temp(join(result_dir, "racon_polishing/{samples}.{assemblers}_racon2.paf")),
-        FA=temp(join(result_dir, "racon_polishing/{samples}.{assemblers}_racon2.fasta")),
-    params:
-        rname="racon2",
-        tag="racon_polishing/{samples}.{assemblers}_racon1.mmi",
-    threads: 32
-    shell:
-        """
-        mkdir -p racon_polishing
-        module load winnowmap
-        winnowmap -d {params.tag} {input.FA}
-        winnowmap -x map-ont -t {threads} {input.FA} {input.FQ} > {output.PAF}
-        racon -t {threads} {input.FQ} {output.PAF} {input.FA} > {output.FA}
-        """
-
-rule racon3:
-    input:
-        FA=join(result_dir, "racon_polishing/{samples}.{assemblers}_racon2.fasta"),
-        FQ=join(result_dir,"raw/{samples}_ONT.fastq")
-    output:
-        PAF=temp(join(result_dir, "racon_polishing/{samples}.{assemblers}_racon3.paf")),
-        FA=join(result_dir, "racon_polishing/{samples}.{assemblers}_racon3.fasta"),
-    params:
-        rname="racon3",
-        tag="racon_polishing/{samples}.{assemblers}_racon2.mmi",
-    threads: 32
-    shell:
-        """
-        mkdir -p racon_polishing
-        module load winnowmap
-        winnowmap -d {params.tag} {input.FA}
-        winnowmap -x map-ont -t {threads} {input.FA} {input.FQ} > {output.PAF}
-        racon -t {threads} {input.FQ} {output.PAF} {input.FA} > {output.FA}
-        """
-
-rule pilon1:
-    input:
-        FA=join(result_dir, "racon_polishing/{samples}.{assemblers}_racon3.fasta"),
-        PB=join(result_dir,"raw/{samples}_CCS.bam")
-    output:
-        BAM=temp(join(result_dir, "pilon_polishing/{samples}.{assemblers}_pilon1.bam")),
-        FA=temp(join(result_dir, "pilon_polishing/{samples}.{assemblers}_pilon1.fasta")),
-    params:
-        dir=temp(join(result_dir, "pilon_polishing/{samples}.{assemblers}_pilon1")),
-        tag="racon_polishing/{samples}.{assemblers}_racon3.mmi",
-        rname="pilon1",
-    threads: 32
-    shell:
-        """
-        mkdir -p pilon_polishing
-        module load smrtanalysis pilon
-        pbmm2 index {input.FA} {params.tag}
-        pbmm2 align {input.FA} {input.PB} {output.BAM} --preset CCS --sort --rg '@RG\tID:myid\tSM:NCBR-174'
-        pilon --genome {input.FA} --bam {output.BAM} --output {params.dir}
-        """
-
-rule pilon2:
-    input:
-        FA=join(result_dir, "pilon_polishing/{samples}.{assemblers}_pilon1.fasta"),
-        PB=join(result_dir,"raw/{samples}_CCS.bam")
-    output:
-        BAM=temp(join(result_dir, "pilon_polishing/{samples}.{assemblers}_pilon2.bam")),
-        FA=temp(join(result_dir, "pilon_polishing/{samples}.{assemblers}_pilon2.fasta")),
-    params:
-        dir=temp(join(result_dir, "pilon_polishing/{samples}.{assemblers}_pilon2")),
-        rname="pilon2",
-        tag="pilon_polishing/{samples}.{assemblers}_pilon1.mmi",
-    threads: 32
-    shell:
-        """
-        mkdir -p pilon_polishing
-        module load smrtanalysis pilon
-        pbmm2 index {input.FA} {params.tag}
-        pbmm2 align {input.FA} {input.PB} {output.BAM} --preset CCS --sort --rg '@RG\tID:myid\tSM:NCBR-174'
-        pilon --genome {input.FA} --bam {output.BAM} --output {params.dir}
-        """
-
-rule pilon3:
-    input:
-        FA=join(result_dir, "pilon_polishing/{samples}.{assemblers}_pilon2.fasta"),
-        PB=join(result_dir,"raw/{samples}_CCS.bam")
-    output:
-        BAM=temp(join(result_dir, "pilon_polishing/{samples}.{assemblers}_pilon3.bam")),
-        FA=temp(join(result_dir, "pilon_polishing/{samples}.{assemblers}_pilon3.fasta")),
-    params:
-        dir=temp(join(result_dir, "pilon_polishing/{samples}.{assemblers}_pilon3")),
-        tag="pilon_polishing/{samples}.{assemblers}_pilon2.mmi",
-        rname="pilon3",
-    threads: 32
-    shell:
-        """
-        mkdir -p pilon_polishing
-        module load smrtanalysis pilon
-        pbmm2 index {input.FA} {params.tag}
-        pbmm2 align {input.FA} {input.PB} {output.BAM} --preset CCS --sort --rg '@RG\tID:myid\tSM:NCBR-174'
-        pilon --genome {input.FA} --bam {output.BAM} --output {params.dir}
-        """
-
-rule stats_busco_racon:
-    input:
-        asm=join(result_dir, "racon_polishing/{samples}.{assemblers}_{iter}.fasta"),
-    output:
-        ST=join(result_dir,"stats_busco/short_summary.{samples}.{Lineage_name}.{assemblers}_{iter}.txt"),
-    params:
-        rname="stats_busco",
-        dir=directory(join(result_dir, "stats_busco")),
-        folder="{assemblers}_{iter}",
-    threads: 32
-    shell:
-        """
-        module load busco/4.0.2
+        module load samtools
+        samtools fastq {input.BAM} > {input.FQ}
         mkdir -p {params.dir}
-        mkdir -p {params.dir}/{params.folder}
-        cd {params.dir}
-        busco --offline -m genome -l {Lineage} -c {threads} -i {input.asm} -f -o {params.folder}
-        """
-
-rule stats_busco_pilon:
-    input:
-        asm=join(result_dir, "pilon_polishing/{samples}.{assemblers}_{iter}.fasta"),
-    output:
-        ST=join(result_dir,"stats_busco/short_summary.{samples}.{Lineage_name}.{assemblers}_{iter}.txt"),
-    params:
-        rname="stats_busco",
-        dir=directory(join(result_dir, "stats_busco")),
-        folder="{assemblers}_{iter}",
-    threads: 32
-    shell:
-        """
-        module load busco/4.0.2
-        mkdir -p {params.dir}
-        mkdir -p {params.dir}/{params.folder}
-        cd {params.dir}
-        busco --offline -m genome -l {Lineage} -c {threads} -i {input.asm} -f -o {params.folder}
-        """
-
-rule busco_summaries_total:
-    input:
-        OLD=expand(join(result_dir,"stats_busco/short_summary.{samples}.{Lineage_name}.{assemblers}.txt"), assemblers=ASSEMBLER, Lineage_name=Lineage_name, samples=SAMPLE),
-        NEW=expand(join(result_dir,"stats_busco/short_summary.{samples}.{Lineage_name}.{assemblers}_{iters}.txt"), assemblers=ASSEMBLER, Lineage_name=Lineage_name, samples=SAMPLE,iters=POLISHED),
-    output:
-        join(result_dir,"busco_figure_2.png"),
-    params:
-        rname="busco_summaries",
-        dir=directory(join(result_dir, "stats_busco")),
-    shell:
-        """
-        module load busco/4.0.2
-        mkdir -p {params.dir}
-        python3 /usr/local/apps/busco/4.0.2/generate_plot.py -rt specific –wd {params.dir}
-        cp stats_busco/busco_figure.png {output}
-        """
-
-rule stats_quast_final:
-    input:
-        asm_p=expand(join(result_dir,"pilon_polishing/{samples}.{assemblers}_{iter}.fasta"), samples=SAMPLE, assemblers=ASSEMBLER,iter=PILON),
-        asm_r=expand(join(result_dir,"racon_polishing/{samples}.{assemblers}_{iter}.fasta"), samples=SAMPLE, assemblers=ASSEMBLER,iter=RACON),
-    output:
-        ST=join(result_dir,"polished-quast/report.html"),
-    params:
-        rname="stats_quast",
-        batch='--cpus-per-task=72 --mem=100g --time=10:00:00',
-        dir=directory("polished-quast")
-    threads: 32
-    shell:
-        """
-        module unload python
-        module load quast/5.0.2
-        module load circos/0.69-9
-        mkdir -p polished-quast
-        quast.py -o {params.dir} -t {threads} --circos -L {input.asm_r} {input.asm_p}
+        ls {input.FQ} > {params.fqs}
+        createNPconfig.py {threads} {input.FA} {params.dir} {params.fqs} {params.cfg}
+        NextPolish/nextPolish {params.cfg}
         """
