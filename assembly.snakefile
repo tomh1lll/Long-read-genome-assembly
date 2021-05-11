@@ -475,6 +475,6 @@ rule nextPolish:
         samtools fastq {input.BAM} > {input.FQ}
         mkdir -p {params.dir}
         ls {input.FQ} > {params.fqs}
-        createNPconfig.py {threads} {input.FA} {params.dir} {params.fqs} {params.cfg}
+        python createNPconfig.py {threads} {input.FA} {params.dir} {params.fqs} {params.cfg}
         NextPolish/nextPolish {params.cfg}
         """
