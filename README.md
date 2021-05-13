@@ -64,14 +64,9 @@ The next set of rules gathers the genome assemblies together and assesses the co
 
 ### Genome polishing and further assessment of assembly quality
 
-Finally, each genome is iteratively polished using the ONT reads (racon, 3 times) and CCS pacbio reads (pilon, 3 times). Each step is then evaluated using QUAST and BUSCO.
+Finally, each genome is iteratively polished using the CCS pacbio reads (nextpolish). Each step is then evaluated using QUAST and BUSCO.
 
-* racon1
-* racon2
-* racon3
-* pilon1
-* pilon2
-* pilon3
+* nextpolish
 * stats_quast_final
 * stats_busco_final
 * busco_summaries_final
