@@ -103,6 +103,11 @@ rule All:
 
         #polishing
         expand(join(result_dir, "all-assemblies/nextPolish.{samples}.{assemblers}/genome.nextpolish.fasta"),samples=SAMPLE, assemblers=ASSEMBLER),
+	
+	#repeats
+	expand(join(result_dir,"all-assemblies/{samples}.{assemblers}-families.fa"),samples=SAMPLE, assemblers=ASSEMBLER),
+        expand(join(result_dir,"all-assemblies/{samples}.{assemblers}.fasta.masked"),samples=SAMPLE, assemblers=ASSEMBLER),
+        expand(join(result_dir,"all-assemblies/{samples}.{assemblers}.fasta.out.gff"),samples=SAMPLE, assemblers=ASSEMBLER),
     output:
         "multiqc_report.html"
     params:
@@ -478,3 +483,41 @@ rule nextPolish:
         python createNPconfig.py {threads} {input.FA} {params.dir} {params.fqs} {params.cfg}
         NextPolish/nextPolish {params.cfg}
         """
+
+rule RepeatModeler:
+  input:
+    fa=join(result_dir,"all-assemblies/{samples}.{assemblers}.fasta"),
+  output:
+    fa=join(result_dir,"all-assemblies/{samples}.{assemblers}-families.fa"),
+  params:
+    rname="RepeatModeler",
+    dir=join(result_dir,"all-assemblies"),
+    id="{samples}.{assembly}"
+  threads:
+    48
+  shell:
+    """
+    cd {params.dir}
+    module load repeatmodeler
+    BuildDatabase -name {params.id} {input.fa}
+    RepeatModeler -database {params.id} -pa {threads} -LTRStruct >& {params.id}.out
+    """
+
+rule RepeatMasker:
+  input:
+    fa=join(result_dir,"all-assemblies/{samples}.{assemblers}.fasta"),
+    rep=join(result_dir,"all-assemblies/{samples}.{assemblers}-families.fa"),
+  output:
+    fa=join(result_dir,"all-assemblies/{samples}.{assemblers}.fasta.masked"),
+    gff=join(result_dir,"all-assemblies/{samples}.{assemblers}.fasta.out.gff"),
+  params:
+    rname="RepeatMasker",
+    dir=join(result_dir,"all-assemblies"),
+  threads:
+    48
+  shell:
+    """
+    cd {params.dir}
+    module load repeatmasker
+    RepeatMasker -u -s -poly -engine rmblast -pa {threads} -gff -no_is -gccalc -norna -lib {input.rep} {input.fa}
+    """
